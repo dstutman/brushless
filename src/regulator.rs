@@ -204,7 +204,7 @@ impl Regulator {
 
         // Our output is a duty cycle vector in the stator fixed frame
         let duty_vector =
-            Vector::from_cartesian(self.dcurrent_pid.output(), self.qcurrent_pid.output());
+            Vector::from_components(self.dcurrent_pid.output(), self.qcurrent_pid.output());
         // Inverse Park transform, positive rotation of vector
         // by phi corresponds to negative rotation of frame
         // (moving back to stator fixed)
@@ -276,10 +276,7 @@ impl RegulatorConfig {
             velocity_pid: Pid::new(self.velocity_consts),
             position_pid: Pid::new(self.position_consts),
             prev_us: None,
-            output: Vector {
-                magnitude: 0.,
-                phase: 0.,
-            },
+            output: Vector::new(0., 0.),
         }
     }
     pub fn set_velocity_consts(&mut self, velocity_consts: Constants) -> &mut Self {
