@@ -173,11 +173,11 @@ impl Regulator {
         log::debug!("Limits are: {:?}", self.limits);
         let target_torque = if let Some((lower_limit, upper_limit)) = self.limits.position {
             if state.position < lower_limit {
-                log::info!("Position limit triggered");
+                log::info!("Position limiter triggered");
                 self.status.position_limited = true;
                 f32::MAX
             } else if state.position > upper_limit {
-                log::info!("Position limit triggered");
+                log::info!("Position limiter triggered");
                 self.status.position_limited = true;
                 f32::MIN
             } else {
@@ -188,7 +188,7 @@ impl Regulator {
         };
         let target_torque = if let Some(limit) = self.limits.speed {
             if fabsf(state.velocity) > limit {
-                log::info!("Speed limit triggered");
+                log::info!("Speed limiter triggered");
                 self.status.speed_limited = true;
                 if state.velocity.is_sign_positive() {
                     f32::MIN
@@ -203,7 +203,7 @@ impl Regulator {
         };
         let target_torque = if let Some(limit) = self.limits.torque_magnitude {
             if fabsf(target_torque) > limit {
-                log::info!("Torque limit triggered");
+                log::info!("Torque limiter triggered");
                 self.status.torque_limited = true;
                 target_torque.clamp(-limit, limit)
             } else {
