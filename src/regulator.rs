@@ -120,8 +120,6 @@ pub struct Regulator {
     velocity_pid: Pid,
     position_pid: Pid,
     // Records the timestamp of `state` at the previous update.
-    // Initially `None` to avoid winding up `Pid` accumulator
-    // on first call.
     prev_us: Option<u32>,
     output: Vector,
     status: Status,
@@ -130,17 +128,18 @@ pub struct Regulator {
 impl Regulator {
     pub fn update(&mut self, state: State) {
         log::info!("Regulating for: {:?}, to: {:?}", state, self.target);
-        let dt = if let Some(prev_us) = self.prev_us {
-            // Handle a wrapping timestamp
-            if state.timestamp_us < prev_us {
-                log::debug!("Timestamp wrapped");
-                u32::MAX - prev_us + state.timestamp_us
+        let dt = 1E-6
+            * if let Some(prev_us) = self.prev_us {
+                // Handle a wrapping timestamp
+                if state.timestamp_us < prev_us {
+                    log::debug!("Timestamp wrapped");
+                    u32::MAX - prev_us + state.timestamp_us
+                } else {
+                    state.timestamp_us - prev_us
+                }
             } else {
-                state.timestamp_us - prev_us
-            }
-        } else {
-            0
-        } as f32;
+                0
+            } as f32;
         self.prev_us = Some(state.timestamp_us);
 
         // Phi is the electrical angle
