@@ -1,6 +1,7 @@
 #![no_std]
-mod util;
 mod pid;
+pub mod regulator;
+mod util;
 
 #[cfg(test)]
 mod tests {
