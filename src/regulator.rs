@@ -24,7 +24,9 @@ pub enum Target {
     /// Radians
     /// Be careful when switching into position mode with a
     /// rotation sensor that supports tracking multiple rotations
-    /// (positions outside of the range [0..2PI]). You may be at some huge
+    /// (positions outside of the range [0..2PI]). You may be at
+    /// some huge angle and the regulator may drive you back to
+    /// your set range at max torque.
     Position(f32),
 }
 
