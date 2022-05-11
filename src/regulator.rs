@@ -1,4 +1,4 @@
-//! Implements field oriented control using direct current and angle sensing.
+//! Implements field oriented regulation using direct current and angle sensing.
 use libm::{cosf, fabsf, sinf, sqrtf};
 
 use crate::pid::{Constants, Pid};
