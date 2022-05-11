@@ -43,12 +43,11 @@ impl Pid {
         let Constants { kp, ki, kd, la } = self.constants;
 
         let err = setpoint - val;
-        self.accumulator += if self.accumulator.abs() > la {
-            log::debug!("Integrator limiter triggered");
-            0.
-        } else {
-            err
-        };
+        self.accumulator += err * dt;
+        if self.accumulator.abs() > la {
+            log::debug!("Accumulator limiter triggered");
+            self.accumulator = self.accumulator.clamp(-la, la);
+        }
         let derivative = if let Some(previous) = self.previous {
             (val - previous) / dt
         } else {
