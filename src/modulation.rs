@@ -6,6 +6,7 @@ use core::{
 use crate::util::Vector;
 
 /// Duty cycles per phase, [0..1]
+#[derive(Debug, Clone, Copy)]
 pub struct PhaseDuties {
     pub u: f32,
     pub v: f32,
