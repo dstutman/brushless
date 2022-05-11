@@ -129,9 +129,11 @@ pub struct Regulator {
 
 impl Regulator {
     pub fn update(&mut self, state: State) {
+        log::info!("Regulating for: {:?}, to: {:?}", state, self.target);
         let dt = if let Some(prev_us) = self.prev_us {
             // Handle a wrapping timestamp
             if state.timestamp_us < prev_us {
+                log::debug!("Timestamp wrapped");
                 u32::MAX - prev_us + state.timestamp_us
             } else {
                 state.timestamp_us - prev_us
@@ -169,11 +171,14 @@ impl Regulator {
         // Implements an aggressive limiting scheme that applies full torque towards
         // desired operating region. This almost certainly saturates the integral and
         // derivative terms of the current regulators.
+        log::debug!("Limits are: {:?}", self.limits);
         let target_torque = if let Some((lower_limit, upper_limit)) = self.limits.position {
             if state.position < lower_limit {
+                log::info!("Position limit triggered");
                 self.status.position_limited = true;
                 f32::MAX
             } else if state.position > upper_limit {
+                log::info!("Position limit triggered");
                 self.status.position_limited = true;
                 f32::MIN
             } else {
@@ -182,9 +187,9 @@ impl Regulator {
         } else {
             target_torque
         };
-
         let target_torque = if let Some(limit) = self.limits.speed {
             if fabsf(state.velocity) > limit {
+                log::info!("Speed limit triggered");
                 self.status.speed_limited = true;
                 if state.velocity.is_sign_positive() {
                     f32::MIN
@@ -197,9 +202,9 @@ impl Regulator {
         } else {
             target_torque
         };
-
         let target_torque = if let Some(limit) = self.limits.torque_magnitude {
             if fabsf(target_torque) > limit {
+                log::info!("Torque limit triggered");
                 self.status.torque_limited = true;
                 target_torque.clamp(-limit, limit)
             } else {
@@ -208,6 +213,7 @@ impl Regulator {
         } else {
             target_torque
         };
+        log::debug!("Target torque: {}", target_torque);
 
         self.dcurrent_pid.update(park.direct, 0., dt);
         self.qcurrent_pid.update(
@@ -223,6 +229,8 @@ impl Regulator {
         // by phi corresponds to negative rotation of frame
         // (moving back to stator fixed)
         self.output = duty_vector.rotated(phi);
+
+        log::debug!("Output is: {:?}", self.output);
     }
     pub fn set_target(&mut self, target: Target) {
         self.target = target;

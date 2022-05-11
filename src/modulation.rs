@@ -44,24 +44,26 @@ impl Mul<f32> for PhaseDuties {
 // `rustfmt` formats the match arms really poorly, so we disable it here
 #[rustfmt::skip]
 pub fn space_vector_modulation(vector: Vector) -> PhaseDuties {
+    log::info!("Modulating for: {:?}", vector);
+    if vector.magnitude > 1. {log::warn!("Space Vector saturated driver, magntiude: {}", vector.magnitude)}
     let Vector {
         magnitude, phase, ..
     } = vector.clamped_magnitude(1.);
-    // Convert the phase from radians to sector-counts.
+    // Convert the phase from radians to sector-counts
     let sectors = phase / (2. * PI / 6.);
     // Re-range the sector-counts to one full rotation around the
-    // space-vector circle.
+    // space-vector circle
     let base_sectors = sectors % 6.;
-    // Correct the sector signs.
+    // Correct the sector signs
     let sector = if base_sectors.is_sign_positive() {
         base_sectors
     } else {
         base_sectors + 6.
     };
-    
+
     let sector_index = sector as u32;
     // `f32::fract(self)` is only available in `std` so
-    // do the same with mod.
+    // do the same with mod
     let mixing_fraction = sector % 1.;
 
     // Some opportunities for optimization here by reordering multiplications.
@@ -141,7 +143,8 @@ pub fn space_vector_modulation(vector: Vector) -> PhaseDuties {
             } * (1. - mixing_fraction) * magnitude
         }
         _ => {
-            panic!("Invalid modulation sector index");
+            log::error!("Invalid modulation sector index: {}", sector_index);
+            unreachable!();
         }
     }
 }
