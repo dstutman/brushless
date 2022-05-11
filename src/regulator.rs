@@ -271,21 +271,25 @@ impl RegulatorConfig {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
+                la: f32::MAX,
             },
             qcurrent_consts: Constants {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
+                la: f32::MAX,
             },
             velocity_consts: Constants {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
+                la: f32::MAX,
             },
             position_consts: Constants {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
+                la: f32::MAX,
             },
         }
     }
