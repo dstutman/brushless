@@ -1,4 +1,5 @@
 #![no_std]
+pub mod modulation;
 mod pid;
 pub mod regulator;
 mod util;
