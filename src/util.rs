@@ -13,8 +13,16 @@ impl Vector {
             phase: atan2f(y, x),
         }
     }
-    pub fn rotated(mut self, angle: f32) -> Self {
-        self.phase += angle;
-        self
+    pub fn clamp_magnitude(self, limit: f32) -> Self {
+        Vector {
+            magnitude: self.magnitude.clamp(-limit, limit),
+            ..self
+        }
+    }
+    pub fn rotated(self, angle: f32) -> Self {
+        Vector {
+            phase: self.phase + angle,
+            ..self
+        }
     }
 }
