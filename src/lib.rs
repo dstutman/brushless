@@ -1,4 +1,5 @@
 #![no_std]
+mod util;
 mod pid;
 
 #[cfg(test)]
