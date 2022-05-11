@@ -101,6 +101,13 @@ fn park_transform(currents: ClarkeCurrent, angle: f32) -> ParkCurrents {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Status {
+    pub torque_limited: bool,
+    pub speed_limited: bool,
+    pub position_limited: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Regulator {
     motor: MotorProperties,
@@ -117,6 +124,7 @@ pub struct Regulator {
     // on first call.
     prev_us: Option<u32>,
     output: Vector,
+    status: Status,
 }
 
 impl Regulator {
@@ -154,6 +162,8 @@ impl Regulator {
             }
         };
 
+        // Reset regulator status
+        self.status = Status::default();
         // The ordering of these limit checks imposes a priority.
         // Torque is the highest priority limit, then velocity, and then position.
         // Implements an aggressive limiting scheme that applies full torque towards
@@ -161,8 +171,10 @@ impl Regulator {
         // derivative terms of the current regulators.
         let target_torque = if let Some((lower_limit, upper_limit)) = self.limits.position {
             if state.position < lower_limit {
+                self.status.position_limited = true;
                 f32::MAX
             } else if state.position > upper_limit {
+                self.status.position_limited = true;
                 f32::MIN
             } else {
                 target_torque
@@ -173,6 +185,7 @@ impl Regulator {
 
         let target_torque = if let Some(limit) = self.limits.speed {
             if fabsf(state.velocity) > limit {
+                self.status.speed_limited = true;
                 if state.velocity.is_sign_positive() {
                     f32::MIN
                 } else {
@@ -187,6 +200,7 @@ impl Regulator {
 
         let target_torque = if let Some(limit) = self.limits.torque_magnitude {
             if fabsf(target_torque) > limit {
+                self.status.torque_limited = true;
                 target_torque.clamp(-limit, limit)
             } else {
                 target_torque
@@ -218,6 +232,9 @@ impl Regulator {
     }
     pub fn output(&self) -> Vector {
         self.output
+    }
+    pub fn status(&self) -> Status {
+        self.status
     }
 }
 
@@ -277,6 +294,7 @@ impl RegulatorConfig {
             position_pid: Pid::new(self.position_consts),
             prev_us: None,
             output: Vector::new(0., 0.),
+            status: Status::default(),
         }
     }
     pub fn set_velocity_consts(&mut self, velocity_consts: Constants) -> &mut Self {
