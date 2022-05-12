@@ -4,6 +4,8 @@ mod pid;
 pub mod regulator;
 mod util;
 
+pub use util::Vector;
+
 #[cfg(test)]
 mod tests {
     #[cfg(test)]
