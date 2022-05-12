@@ -60,6 +60,16 @@ pub struct PhaseCurrents {
     pub w: f32,
 }
 
+impl Default for PhaseCurrents {
+    fn default() -> Self {
+        PhaseCurrents {
+            u: 0.,
+            v: 0.,
+            w: 0.,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct State {
     /// Microseconds, wrapping allowed

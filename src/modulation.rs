@@ -13,9 +13,13 @@ pub struct PhaseDuties {
     pub w: f32,
 }
 
-impl PhaseDuties {
-    pub fn new(u: f32, v: f32, w: f32) -> Self {
-        PhaseDuties { u, v, w }
+impl Default for PhaseDuties {
+    fn default() -> Self {
+        PhaseDuties {
+            u: 0.,
+            v: 0.,
+            w: 0.,
+        }
     }
 }
 
