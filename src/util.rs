@@ -7,7 +7,7 @@ pub struct Vector {
     pub magnitude: f32,
     pub phase: f32,
     // Block construction so magnitude invariants can be upheld
-    _block: (),
+    _private: (),
 }
 
 impl Vector {
@@ -19,14 +19,14 @@ impl Vector {
             } else {
                 phase + PI
             },
-            _block: (),
+            _private: (),
         }
     }
     pub fn from_components(x: f32, y: f32) -> Self {
         Vector {
             magnitude: sqrtf(powf(x, 2.) + powf(y, 2.)),
             phase: atan2f(y, x),
-            _block: (),
+            _private: (),
         }
     }
     pub fn clamped_magnitude(self, limit: f32) -> Self {
