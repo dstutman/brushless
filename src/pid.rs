@@ -37,8 +37,8 @@ impl Pid {
     }
 
     pub fn update(&mut self, val: f32, setpoint: f32, dt: f32) {
-        if val.is_subnormal() || dt.is_subnormal() {
-            log::warn!("Subnormal argument, val was: {}, dt was: {} ", val, dt);
+        if dt == 0. || dt == -0. {
+            log::warn!("Invalid dt argument, dt was: {} ", dt);
             return;
         }
 
