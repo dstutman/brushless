@@ -1,3 +1,5 @@
+use libm::fabsf;
+
 #[derive(Clone, Copy, Debug)]
 pub struct Constants {
     pub kp: f32,
@@ -44,7 +46,7 @@ impl Pid {
 
         let err = setpoint - val;
         self.accumulator += err * dt;
-        if self.accumulator.abs() > la {
+        if fabsf(self.accumulator) > la {
             log::debug!("Accumulator limiter triggered");
             self.accumulator = self.accumulator.clamp(-la, la);
         }
