@@ -36,19 +36,53 @@ pub struct Limits {
     pub torque_magnitude: Option<f32>,
     /// Radians per second
     pub speed: Option<f32>,
-    /// Radians, first to second CCW, inclusive.
+    /// Radians, inclusive.
     /// Values may exceed 2PI to allow multiple
-    /// rotations.
+    /// rotations. Lower limit is always first index.
     pub position: Option<(f32, f32)>,
+    // Block construction
+    _private: (),
+}
+
+impl Limits {
+    pub fn new(
+        torque_magnitude: Option<f32>,
+        speed: Option<f32>,
+        position: Option<(f32, f32)>,
+    ) -> Self {
+        if let Some(limit) = torque_magnitude {
+            if !limit.is_sign_positive() {
+                log::error!("Invalid torque magnitude limit");
+                panic!();
+            }
+        }
+
+        if let Some(limit) = speed {
+            if !limit.is_sign_positive() {
+                log::error!("Invalid speed limit");
+                panic!();
+            }
+        }
+
+        if let Some((lower_limit, upper_limit)) = position {
+            if !(lower_limit <= upper_limit) {
+                log::error!("Invalid position limit ordering");
+                panic!();
+            }
+        }
+
+        Limits {
+            torque_magnitude,
+            speed,
+            position,
+            _private: (),
+        }
+    }
 }
 
 impl Default for Limits {
     fn default() -> Self {
-        Limits {
-            torque_magnitude: None,
-            speed: None,
-            position: None,
-        }
+        Limits::new(None, None, None)
     }
 }
 
@@ -271,11 +305,7 @@ impl RegulatorConfig {
     pub fn new(motor: MotorProperties) -> Self {
         RegulatorConfig {
             motor,
-            limits: Limits {
-                torque_magnitude: None,
-                speed: None,
-                position: None,
-            },
+            limits: Limits::new(None, None, None),
             // TODO: Intelligent selection of constants
             // NOTE: Selection will require adequate scaling
             // to account for expected setpoint range.
