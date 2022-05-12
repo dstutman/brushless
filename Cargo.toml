@@ -13,3 +13,7 @@ libm = "0.2.1"
 [dev-dependencies]
 # Implementation of `log` facade
 env_logger = "0.9.0"
+# GUI library for simulator
+eframe = "0.18.0"
+# Physics library for simulator
+rapier2d = { version = "0.12.0", features = [ "simd-stable" ] }
