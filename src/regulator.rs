@@ -1,7 +1,7 @@
 //! Implements field oriented regulation using direct current and angle sensing.
 use libm::{cosf, fabsf, sinf, sqrtf};
 
-use crate::pid::{Constants, Pid};
+use crate::pid::{self, Pid};
 use crate::util::Vector;
 
 #[derive(Debug, Clone, Copy)]
@@ -199,13 +199,15 @@ impl Regulator {
             Target::Velocity(target_velocity) => {
                 self.velocity_pid
                     .update(state.velocity, target_velocity, dt);
-                self.velocity_pid.output()
+                self.velocity_pid.output.total()
             }
             Target::Position(target_position) => {
                 // NOTE: Maybe cascade the position loop with the velocity loop
                 self.position_pid
                     .update(state.position, target_position, dt);
-                self.position_pid.output()
+                self.velocity_pid
+                    .update(state.velocity, self.position_pid.output.total(), dt);
+                self.velocity_pid.output.total()
             }
         };
 
@@ -268,8 +270,10 @@ impl Regulator {
         );
 
         // Our output is a duty cycle vector in the stator fixed frame
-        let duty_vector =
-            Vector::from_components(self.dcurrent_pid.output(), self.qcurrent_pid.output());
+        let duty_vector = Vector::from_components(
+            self.dcurrent_pid.output.total(),
+            self.qcurrent_pid.output.total(),
+        );
         // Inverse Park transform, positive rotation of vector
         // by phi corresponds to negative rotation of frame
         // (moving back to stator fixed)
@@ -289,16 +293,26 @@ impl Regulator {
     pub fn status(&self) -> Status {
         self.status
     }
+    pub fn reset_pids(&mut self) {
+        self.dcurrent_pid.reset();
+        self.qcurrent_pid.reset();
+        self.velocity_pid.reset();
+        self.position_pid.reset();
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct RegulatorConfig {
     motor: MotorProperties,
     limits: Limits,
-    dcurrent_consts: Constants,
-    qcurrent_consts: Constants,
-    velocity_consts: Constants,
-    position_consts: Constants,
+    dcurrent_consts: pid::Constants,
+    dcurrent_limits: pid::Limits,
+    qcurrent_consts: pid::Constants,
+    qcurrent_limits: pid::Limits,
+    velocity_consts: pid::Constants,
+    velocity_limits: pid::Limits,
+    position_consts: pid::Constants,
+    position_limits: pid::Limits,
 }
 
 impl RegulatorConfig {
@@ -309,30 +323,30 @@ impl RegulatorConfig {
             // TODO: Intelligent selection of constants
             // NOTE: Selection will require adequate scaling
             // to account for expected setpoint range.
-            dcurrent_consts: Constants {
+            dcurrent_consts: pid::Constants {
+                kp: 1.,
+                ki: 0.,
+                kd: 1E-2,
+            },
+            dcurrent_limits: pid::Limits::default(),
+            qcurrent_consts: pid::Constants {
+                kp: 1.,
+                ki: 0.,
+                kd: 1E-2,
+            },
+            qcurrent_limits: pid::Limits::default(),
+            velocity_consts: pid::Constants {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
-                la: f32::MAX,
             },
-            qcurrent_consts: Constants {
+            velocity_limits: pid::Limits::default(),
+            position_consts: pid::Constants {
                 kp: 1.,
                 ki: 0.,
                 kd: 0.,
-                la: f32::MAX,
             },
-            velocity_consts: Constants {
-                kp: 1.,
-                ki: 0.,
-                kd: 0.,
-                la: f32::MAX,
-            },
-            position_consts: Constants {
-                kp: 1.,
-                ki: 0.,
-                kd: 0.,
-                la: f32::MAX,
-            },
+            position_limits: pid::Limits::default(),
         }
     }
     /// Realize a `Regulator` from the configuration
@@ -341,29 +355,45 @@ impl RegulatorConfig {
             motor: self.motor,
             target: Target::Torque(0.),
             limits: self.limits,
-            dcurrent_pid: Pid::new(self.dcurrent_consts),
-            qcurrent_pid: Pid::new(self.qcurrent_consts),
-            velocity_pid: Pid::new(self.velocity_consts),
-            position_pid: Pid::new(self.position_consts),
+            dcurrent_pid: Pid::new(self.dcurrent_consts, self.dcurrent_limits),
+            qcurrent_pid: Pid::new(self.qcurrent_consts, self.qcurrent_limits),
+            velocity_pid: Pid::new(self.velocity_consts, self.velocity_limits),
+            position_pid: Pid::new(self.position_consts, self.position_limits),
             prev_us: None,
             output: Vector::new(0., 0.),
             status: Status::default(),
         }
     }
-    pub fn set_velocity_consts(&mut self, velocity_consts: Constants) -> &mut Self {
+    pub fn set_velocity_consts(&mut self, velocity_consts: pid::Constants) -> &mut Self {
         self.velocity_consts = velocity_consts;
         self
     }
-    pub fn set_position_consts(&mut self, position_consts: Constants) -> &mut Self {
+    pub fn set_velocity_limits(&mut self, velocity_limits: pid::Limits) -> &mut Self {
+        self.velocity_limits = velocity_limits;
+        self
+    }
+    pub fn set_position_consts(&mut self, position_consts: pid::Constants) -> &mut Self {
         self.position_consts = position_consts;
         self
     }
-    pub fn set_dcurrent_consts(&mut self, dcurrent_consts: Constants) -> &mut Self {
+    pub fn set_position_limits(&mut self, position_limits: pid::Limits) -> &mut Self {
+        self.position_limits = position_limits;
+        self
+    }
+    pub fn set_dcurrent_consts(&mut self, dcurrent_consts: pid::Constants) -> &mut Self {
         self.dcurrent_consts = dcurrent_consts;
         self
     }
-    pub fn set_qcurrent_consts(&mut self, qcurrent_consts: Constants) -> &mut Self {
+    pub fn set_dcurrent_limits(&mut self, dcurrent_limits: pid::Limits) -> &mut Self {
+        self.dcurrent_limits = dcurrent_limits;
+        self
+    }
+    pub fn set_qcurrent_consts(&mut self, qcurrent_consts: pid::Constants) -> &mut Self {
         self.qcurrent_consts = qcurrent_consts;
+        self
+    }
+    pub fn set_qcurrent_limits(&mut self, qcurrent_limits: pid::Limits) -> &mut Self {
+        self.qcurrent_limits = qcurrent_limits;
         self
     }
 }
