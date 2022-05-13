@@ -8,8 +8,6 @@ pub use util::Vector;
 
 #[cfg(test)]
 mod tests {
-    #[cfg(test)]
-    extern crate std;
 
     use crate::regulator::{MotorProperties, PhaseCurrents, RegulatorConfig, State};
 
