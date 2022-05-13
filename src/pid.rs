@@ -101,7 +101,11 @@ impl Pid {
         let proportional = kp * err;
         let proportional = if fabsf(proportional) > lp {
             log::debug!("Proportional limiter triggered");
-            lp * proportional.signum()
+            if proportional.is_sign_positive() {
+                lp
+            } else {
+                -lp
+            }
         } else {
             proportional
         };
@@ -117,7 +121,11 @@ impl Pid {
             // Could use `clamp` but then we can't log
             if fabsf(self.integral) > li {
                 log::debug!("Integral limiter triggered");
-                self.integral = li * self.integral.signum();
+                self.integral = if self.integral.is_sign_positive() {
+                    li
+                } else {
+                    -li
+                }
             }
         } else {
             log::debug!("Output saturated, not updating integral");
@@ -129,7 +137,11 @@ impl Pid {
             // If less than target and decreasing: derivative of error is positive
             // If greater than target and increasing: derivative of error is positive
             // If greater than target and decreasing: derivative of error is negative
-            kd * (val - previous) / dt * -err.signum()
+            if err.is_sign_positive() {
+                -kd * (val - previous) / dt
+            } else {
+                kd * (val - previous) / dt
+            }
         } else {
             0.
         };
@@ -137,7 +149,11 @@ impl Pid {
         // Could use `clamp` but then we can't log
         let derivative = if fabsf(derivative) > ld {
             log::debug!("Derivative limiter triggered");
-            ld * derivative.signum()
+            if derivative.is_sign_positive() {
+                ld
+            } else {
+                -ld
+            }
         } else {
             derivative
         };
