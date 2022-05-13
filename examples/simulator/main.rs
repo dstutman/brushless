@@ -33,6 +33,7 @@ impl App {
             gui: Gui::new(),
             rotor: RotorSimulator::new(motor, 3.7 * 4.),
             regulator: RegulatorConfig::new(motor).realize(),
+            last_targettype: TargetType::Torque,
         }
     }
 }
