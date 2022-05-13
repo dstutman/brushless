@@ -17,6 +17,7 @@ struct App {
     gui: Gui,
     rotor: RotorSimulator,
     regulator: Regulator,
+    last_targettype: TargetType,
 }
 
 impl App {
@@ -69,6 +70,10 @@ impl eframe::App for App {
             TargetType::Position => Target::Position(self.gui.targets.position),
         };
         self.regulator.set_target(target);
+        self.last_targettype = self.gui.targets.selected;
+        if self.last_targettype != self.gui.targets.selected {
+            self.regulator.reset_pids();
+        }
 
         let limits = Limits::new(
             if self.gui.torque_limit.enabled {
@@ -106,6 +111,8 @@ impl eframe::App for App {
 
         if self.gui.reset_requested {
             self.rotor.reset();
+            self.regulator.reset_pids();
+            self.time_us = Wrapping(0);
         }
     }
 }
