@@ -1,4 +1,7 @@
 //! Implements field oriented regulation using direct current and angle sensing.
+// TODO: There's actually a big problem here with wrapping of target positions (and velocities).
+// either the sensor needs to be improved to track full rotations (simplest solution), or all the
+// math needs to handle rotation domain boundaries (probably more robust overall).
 use libm::{cosf, fabsf, sinf, sqrtf};
 
 use crate::pid::{self, Pid};
