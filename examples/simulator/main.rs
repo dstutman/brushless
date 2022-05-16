@@ -1,4 +1,4 @@
-use std::num::Wrapping;
+use std::{f32::consts::PI, num::Wrapping};
 
 use eframe;
 
@@ -18,13 +18,18 @@ struct App {
     rotor: RotorSimulator,
     regulator: Regulator,
     last_targettype: TargetType,
+    // If there are not a minimum number of samples
+    // per revolution the controller is unable to track
+    // the rotor's position adequately. We correct this
+    // by enforcing a limit.
+    min_samples_per_revolution: f32,
 }
 
 impl App {
     pub fn default() -> Self {
         let motor = MotorProperties {
             inertia: 1E-4,
-            pole_pairs: 7,
+            pole_pairs: 1,
             phase_resistance: 22.,
             torque_constant: 0.05,
         };
@@ -34,12 +39,11 @@ impl App {
             rotor: RotorSimulator::new(motor, 3.7 * 4.),
             regulator: RegulatorConfig::new(motor).realize(),
             last_targettype: TargetType::Torque,
+            min_samples_per_revolution: 20.,
         }
     }
-}
 
-impl eframe::App for App {
-    fn update(&mut self, ctx: &eframe::egui::Context, _: &mut eframe::Frame) {
+    pub fn step_simulation(&mut self, dt: f32) {
         let state = State {
             currents: self.rotor.phase_currents(),
             position: self.rotor.angle(),
@@ -47,20 +51,35 @@ impl eframe::App for App {
             timestamp_us: self.time_us.0,
         };
 
+        self.regulator.update(state);
+        self.rotor
+            .set_phase_duties(space_vector_modulation(self.regulator.output()));
+        self.rotor.step(dt);
+    }
+}
+
+impl eframe::App for App {
+    fn update(&mut self, ctx: &eframe::egui::Context, _: &mut eframe::Frame) {
         if !self.gui.paused {
             // If we aren't paused, keep repainting so the simulation/animations can run.
             ctx.request_repaint();
             let dt = self.gui.dilation * ctx.input().predicted_dt;
             self.time_us += (1E6 * dt) as u32;
 
-            self.regulator.update(state);
+            let max_dt = 2. * PI / self.min_samples_per_revolution / self.rotor.angular_velocity();
 
-            self.rotor
-                .set_phase_duties(space_vector_modulation(self.regulator.output()));
-
-            self.rotor.step(dt);
+            // This cast could fail, but it's not likely
+            for _ in 0..((dt / max_dt) as usize) {
+                self.step_simulation(max_dt);
+            }
+            self.step_simulation(dt % max_dt);
         }
-
+        let state = State {
+            currents: self.rotor.phase_currents(),
+            position: self.rotor.angle(),
+            velocity: self.rotor.angular_velocity(),
+            timestamp_us: self.time_us.0,
+        };
         self.gui
             .update(state, self.regulator.status(), self.regulator.output());
         self.gui.show(ctx);
